@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.log
+
+# Personal. Voice recordings are biometric data and must never be published.
+# The old "voices/*.wav" missed voices/<name>/NN.wav, because git's * does not
+# cross a directory separator.
+voices/**
+!voices/.gitkeep
+
+config.json
+config.json*.bak
+transcripts/
+
+# Downloaded on first run, ~7 GB.
+models/
+
+# Third-party driver, fetched by the setup wizard. Not ours to redistribute.
+vbcable/
+vbcable*.zip
+
+tools/_smoke/
+build/
+dist/
+*.spec
