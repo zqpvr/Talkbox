@@ -1,0 +1,7 @@
+# Keep line endings stable across contributors. Without this, git warns on
+# every add and diffs fill with whole-file changes.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.wav binary
+*.pt binary
