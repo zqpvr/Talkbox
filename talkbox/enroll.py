@@ -180,6 +180,22 @@ def profile_dir(name: str) -> Path:
     return VOICES_DIR / name
 
 
+def profile_clips(name: str) -> list[Path]:
+    """Every reference recording belonging to a profile.
+
+    Multi-clip profiles live in voices/<name>/NN.wav. The older single-file
+    layout, voices/<name>.wav, is still honoured so an existing recording keeps
+    working without being re-done.
+    """
+    directory = profile_dir(name)
+    if directory.is_dir():
+        clips = sorted(directory.glob("*.wav"))
+        if clips:
+            return clips
+    single = VOICES_DIR / f"{name}.wav"
+    return [single] if single.exists() else []
+
+
 def save_profile(name: str, audio: np.ndarray, rate: int) -> Path:
     """Write a single-clip profile. Kept for the simple path and for tools."""
     return save_profile_clips(name, [(audio, rate)])[0]

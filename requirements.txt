@@ -5,8 +5,17 @@ faster-whisper>=1.1.0
 # should not vanish if faster-whisper ever changes engines.
 ctranslate2>=4.5.0
 
+# transformers must stay on 4.x. coqui-tts imports isin_mps_friendly from
+# transformers.pytorch_utils, which 5.0 removed; installing 5.x makes the whole
+# TTS package unimportable. coqui-tts's own floor is 4.47.
+transformers>=4.47,<5
 sentencepiece>=0.2.0
 protobuf>=4.25.0
+# The ja/zh/ko extras are not optional for us. XTTS routes those languages
+# through romanisation and word-segmentation front ends (cutlet, jieba,
+# pypinyin, g2pkk); without them synthesis raises ModuleNotFoundError at the
+# moment someone selects Japanese, Chinese or Korean.
+coqui-tts[ja,ko,zh]>=0.25.1
 silero-vad>=5.1
 huggingface_hub>=0.25.0
 
