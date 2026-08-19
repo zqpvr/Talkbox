@@ -1,6 +1,14 @@
 faster-whisper>=1.1.0
 
+# Named explicitly even though faster-whisper pulls it in. mt.py imports it
+# directly to run the translator, so it is a first-class dependency here and
+# should not vanish if faster-whisper ever changes engines.
+ctranslate2>=4.5.0
+
+sentencepiece>=0.2.0
+protobuf>=4.25.0
 silero-vad>=5.1
+huggingface_hub>=0.25.0
 
 sounddevice>=0.4.7
 soundfile>=0.12.1
