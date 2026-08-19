@@ -1,3 +1,5 @@
+faster-whisper>=1.1.0
+
 silero-vad>=5.1
 
 sounddevice>=0.4.7
