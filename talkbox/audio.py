@@ -202,6 +202,38 @@ def autoselect_monitor(devices: list[DeviceInfo] | None = None) -> DeviceInfo | 
     return None
 
 
+def autoselect_call_sink(
+    devices: list[DeviceInfo] | None = None,
+) -> DeviceInfo | None:
+    """Pick the virtual cable input that a call application will hear.
+
+    Returns None when no virtual cable is installed, which is a setup step the
+    user has to complete rather than something to silently work around: without
+    one there is no way to present audio to Discord or Zoom as a microphone.
+    """
+    devices = devices if devices is not None else output_devices()
+    pool = [d for d in devices if _has(d.name, _CABLE_SINKS)]
+    for dev in sorted(pool, key=lambda d: _rank(d, prefer_headphones=False)):
+        if probe(dev, "output"):
+            return dev
+    return None
+
+
+def is_headphones(dev: DeviceInfo) -> bool:
+    """Best-effort guess at whether output is worn rather than in the room.
+
+    Only a guess -- Windows does not report transducer type -- but the naming
+    convention is consistent enough to pick a safe default, and the user can
+    override it.
+    """
+    return _has(dev.name, _HEADPHONES)
+
+
+def is_cable_sink(dev: DeviceInfo) -> bool:
+    """True when a call application could actually listen to this endpoint."""
+    return _has(dev.name, _CABLE_SINKS)
+
+
 def input_devices() -> list[DeviceInfo]:
     return _enumerate("input")
 
@@ -404,3 +436,66 @@ class Playback:
         outdata[:] = np.repeat(chunk[:, None], self._channels, axis=1)
 
 
+class FanoutPlayback:
+    """Writes the same audio to several sinks (virtual cable + your headphones).
+
+    `local_only` exists for sounds the user should hear but the call must not:
+    error cues, test tones, anything that would be baffling to the person on
+    the other end.
+    """
+
+    def __init__(self, sinks: list[Playback], local: list[Playback] | None = None):
+        self._sinks = sinks
+        self._local = local if local is not None else []
+
+    def start(self) -> None:
+        for sink in self._sinks:
+            sink.start()
+
+    def stop(self) -> None:
+        for sink in self._sinks:
+            sink.stop()
+
+    def write(self, samples: np.ndarray) -> None:
+        for sink in self._sinks:
+            sink.write(samples)
+
+    def hold(self, seconds: float) -> None:
+        for sink in self._sinks:
+            sink.hold(seconds)
+
+    def release(self) -> None:
+        for sink in self._sinks:
+            sink.release()
+
+    def write_local(self, samples: np.ndarray) -> None:
+        """Play only where the user can hear it, never into the call."""
+        for sink in self._local or self._sinks[:1]:
+            sink.write(samples)
+
+    def flush(self) -> None:
+        for sink in self._sinks:
+            sink.flush()
+
+    @property
+    def queued_seconds(self) -> float:
+        return max((s.queued_seconds for s in self._sinks), default=0.0)
+
+
+def cue_tone(kind: str = "error", rate: int = TTS_RATE) -> np.ndarray:
+    """A brief two-tone blip for the monitor sink.
+
+    Deliberately quiet and short. It has to be noticeable while gaming without
+    being mistaken for a game sound or drowning out the conversation.
+    """
+    if kind == "error":
+        freqs, seconds, level = (660.0, 440.0), 0.10, 0.16
+    else:
+        freqs, seconds, level = (520.0, 780.0), 0.09, 0.13
+    out = []
+    for freq in freqs:
+        n = int(rate * seconds)
+        t = np.arange(n) / rate
+        env = np.minimum(1.0, np.minimum(t * 60.0, (seconds - t) * 60.0))
+        out.append((level * np.sin(2 * np.pi * freq * t) * env).astype(np.float32))
+    return np.concatenate(out)
