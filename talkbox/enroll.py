@@ -235,3 +235,40 @@ def save_profile_clips(name: str, clips: list[tuple[np.ndarray, int]]) -> list[P
     return written
 
 
+def inspect_set(clips: list[tuple[np.ndarray, int]]) -> tuple[bool, str]:
+    """Judge the whole set. Returns (can_save, message)."""
+    usable = [c for c in clips if c[0].size]
+    if not usable:
+        return False, "Nothing recorded yet."
+    total = sum(a.size / r for a, r in usable)
+    for audio, rate in usable:
+        ok, message = inspect(audio, rate, minimum=3.0)
+        if not ok:
+            return False, message
+    if len(usable) < MIN_CLIPS:
+        return False, f"Record at least {MIN_CLIPS} clips."
+    if len(usable) < len(CLIP_PROMPTS):
+        return True, f"{total:.0f}s recorded. All {len(CLIP_PROMPTS)} clips is better."
+    return True, f"{total:.0f}s recorded across {len(usable)} clips."
+
+
+def inspect(audio: np.ndarray, rate: int, minimum: float = 6.0) -> tuple[bool, str]:
+    """Cheap sanity checks so a bad reference is caught before it is used."""
+    if audio.size == 0:
+        return False, "Nothing was recorded."
+    duration = audio.size / rate
+    peak = float(np.abs(audio).max())
+    rms = float(np.sqrt(np.mean(audio**2)))
+
+    if duration < minimum:
+        return False, (
+            f"Only {duration:.1f}s captured. Aim for at least "
+            f"{minimum + 4:.0f} seconds."
+        )
+    if peak >= 0.999:
+        return False, "The recording is clipping. Lower your input gain and retry."
+    if rms < 0.005:
+        return False, "Far too quiet. Move closer to the mic or raise input gain."
+    if duration < 12:
+        return True, f"{duration:.1f}s captured - usable, but 20s clones better."
+    return True, f"{duration:.1f}s captured, levels look good."
