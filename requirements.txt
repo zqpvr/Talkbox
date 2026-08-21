@@ -1,3 +1,7 @@
+# torch/torchaudio are installed separately by setup.ps1 from the CUDA wheel
+# index, because the default PyPI wheels are CPU-only and this app is not
+# usable in real time without the GPU.
+
 faster-whisper>=1.1.0
 
 # Named explicitly even though faster-whisper pulls it in. mt.py imports it
@@ -23,3 +27,5 @@ sounddevice>=0.4.7
 soundfile>=0.12.1
 soxr>=0.5.0
 numpy>=1.26
+
+PySide6>=6.7.0

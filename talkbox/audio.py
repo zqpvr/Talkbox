@@ -234,6 +234,19 @@ def is_cable_sink(dev: DeviceInfo) -> bool:
     return _has(dev.name, _CABLE_SINKS)
 
 
+def call_source_name(sink: DeviceInfo) -> str:
+    """The capture device a call app should be pointed at, given our sink."""
+    low = sink.name.lower()
+    if "cable input" in low:
+        return "CABLE Output (VB-Audio Virtual Cable)"
+    if "voicemeeter" in low:
+        return "VoiceMeeter Output"
+    for dev in input_devices():
+        if _has(dev.name, _CABLE_SOURCES):
+            return dev.name
+    return "the matching virtual cable output"
+
+
 def input_devices() -> list[DeviceInfo]:
     return _enumerate("input")
 
@@ -265,6 +278,15 @@ def resolve_device(
     if name or index is not None:
         return None
     return devices[0] if devices else None
+
+
+def find_virtual_cable(devices: list[DeviceInfo]) -> DeviceInfo | None:
+    """Locate a VB-Audio Virtual Cable sink, if one is installed."""
+    for needle in ("CABLE Input", "VoiceMeeter Input", "VB-Audio"):
+        for dev in devices:
+            if needle.lower() in dev.name.lower():
+                return dev
+    return None
 
 
 class MicCapture:
